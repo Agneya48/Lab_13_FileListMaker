@@ -11,7 +11,7 @@ public class FileListMaker {
     private static ArrayList<String> records = new ArrayList<>();
     private static boolean needsToBeSaved = false;
     private static boolean loadTag = false;
-    private static String filename = "";
+    private static String loadedFileName = "";
     private static JFileChooser chooser = new JFileChooser();
     private static File selectedFile;
 
@@ -45,7 +45,7 @@ public class FileListMaker {
 
                     case "c", "C" -> clearList(in);
 
-                    case "o", "O" -> openFile();
+                    case "o", "O" -> openFile(in);
 
                     case "s", "S" -> saveFile(in);
 
@@ -115,19 +115,25 @@ public class FileListMaker {
         }
     }
 
-    private static void clearList(Scanner pipe) {
+    private static void clearList(Scanner pipe) throws IOException {
         boolean confirm = false;
         confirm = SafeInput.getYNConfirm(pipe, "Clear - Warning: will clear current data. Do you wish to proceed? [Y/N]");
+        if (confirm && needsToBeSaved) {
+            saveCheck(pipe, "Do you wish to save the current file before clearing data? [Y/N]");
+        }
         if (confirm) {
             records.clear();
             System.out.println("Data cleared");
-            //leaving out dirty flag because there's not much point saving a blank file; better to not overwrite previous file by default
+            needsToBeSaved = false;
+            loadedFileName = "";
+            loadTag = false;
+            //Resetting dirty and load tags since there's no point saving a blank file; better to not overwrite previous file by default
         }
 
     }
 
     private static void displayMenu() {
-        System.out.println("A - Add   D - Delete   I - Insert   M - Move   P - Print   C - Clear   Q - Quit");
+        System.out.println("A - Add   D - Delete   I - Insert   M - Move   V - View   C - Clear  O - Open   S - Save   Q - Quit");
     }
 
     private static void displayList() {
@@ -137,10 +143,17 @@ public class FileListMaker {
     }
 
     private static void viewList() {
-        System.out.println(records);
+        System.out.println();
+        for (int index = 0; index < records.size(); index++) {
+            System.out.println(index + ") " + records.get(index));
+        }
     }
 
-    private static void openFile() throws FileNotFoundException, IOException {
+    private static void openFile(Scanner pipe) throws FileNotFoundException, IOException {
+
+        if (needsToBeSaved) {
+            saveCheck(pipe, "Current file has unsaved data. Do you want to save first? [Y/N]");
+        }
         JFileChooser chooser = new JFileChooser();
         File selectedFile;
         File workingDirectory = new File(System.getProperty("user.dir"));
@@ -162,13 +175,21 @@ public class FileListMaker {
                 records.add(lineEntry);
                 line++;
             }
+            loadTag = true;
+            loadedFileName = selectedFile.getName();
             reader.close();
         }
     }
 
     private static void saveFile(Scanner pipe) throws IOException {
-        String fileName = SafeInput.getNonZeroLenString(pipe, "Enter file name to save");
-        fileName = fileName + ".txt";
+        String fileName = "";
+        if (loadTag) {
+            fileName = loadedFileName;
+        }
+        else {
+            fileName = SafeInput.getNonZeroLenString(pipe, "Enter file name to save");
+            fileName = fileName + ".txt";
+        }
 
         File workingDirectory = new File(System.getProperty("user.dir"));
         Path file = Paths.get(workingDirectory.getPath() + "\\src\\" + fileName);
@@ -183,11 +204,24 @@ public class FileListMaker {
 
         }
         writer.close();
-        System.out.println("Data file written!");
+        System.out.println("Data successfully saved!");
     }
 
-    private static boolean quit(Scanner pipe) {
+    private static void saveCheck(Scanner pipe, String prompt) throws IOException {
+        //is called when dirty tag is activated, and the file may need to be saved before data is lost
+        if (needsToBeSaved) {
+            boolean saveCurrentFile = SafeInput.getYNConfirm(pipe, prompt);
+            if (saveCurrentFile) {
+                saveFile(pipe);
+            }
+        }
+    }
+
+    private static boolean quit(Scanner pipe) throws IOException {
         boolean confirm = SafeInput.getYNConfirm(pipe, "Are you sure you want to quit? [Y/N]");
+        if (needsToBeSaved) {
+            saveCheck(pipe, "Current file has unsaved data. Do you wish to save before quiting? [Y/N");
+        }
         return confirm;
     }
 }

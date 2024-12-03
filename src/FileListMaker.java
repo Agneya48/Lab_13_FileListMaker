@@ -80,7 +80,7 @@ public class FileListMaker {
         if (records.isEmpty())
             System.out.println("Error: List empty");
         else {
-            int index = SafeInput.getRangedInt(pipe, "Remove - enter index value", 0, (records.size() - 1));
+            int index = SafeInput.getRangedInt(pipe, "Delete - enter index value", 0, (records.size() - 1));
             records.remove(index);
             needsToBeSaved = true;
         }
@@ -177,6 +177,7 @@ public class FileListMaker {
             }
             loadTag = true;
             loadedFileName = selectedFile.getName();
+            System.out.println("Successfully loaded " + loadedFileName);
             reader.close();
         }
     }
@@ -196,15 +197,19 @@ public class FileListMaker {
 
         OutputStream out = new BufferedOutputStream(Files.newOutputStream(file, CREATE));
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+        int lines = 0;
 
         for(String entry : records)
         {
             writer.write(entry, 0, entry.length());
-            writer.newLine();  // adds the new line
+            lines++;
+            if (lines < (records.size())) {
+                writer.newLine();  // adds new line on all lines but last (to avoid a blank list item)
+            }
 
         }
         writer.close();
-        System.out.println("Data successfully saved!");
+        System.out.println("Data saved to " + fileName);
     }
 
     private static void saveCheck(Scanner pipe, String prompt) throws IOException {
@@ -220,7 +225,7 @@ public class FileListMaker {
     private static boolean quit(Scanner pipe) throws IOException {
         boolean confirm = SafeInput.getYNConfirm(pipe, "Are you sure you want to quit? [Y/N]");
         if (needsToBeSaved) {
-            saveCheck(pipe, "Current file has unsaved data. Do you wish to save before quiting? [Y/N");
+            saveCheck(pipe, "Current file has unsaved data. Do you wish to save before quiting? [Y/N]");
         }
         return confirm;
     }

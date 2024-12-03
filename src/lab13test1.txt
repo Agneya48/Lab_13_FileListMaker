@@ -1,0 +1,7 @@
+cats
+dogs
+horses
+pigs
+cows
+humans
+ferrets
